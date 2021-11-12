@@ -8,11 +8,16 @@ use conmon::{
 use futures::TryFutureExt;
 use getset::{Getters, MutGetters};
 use log::{debug, info};
+use nix::{
+    libc::_exit,
+    unistd::{fork, ForkResult},
+};
 use std::{env, path::PathBuf};
 use stream::Stream;
 use tokio::{
     fs,
     net::UnixListener,
+    runtime::Builder,
     signal::unix::{signal, SignalKind},
     sync::oneshot,
 };
@@ -83,9 +88,26 @@ impl Conmon for ConmonServerImpl {
     }
 }
 
-// Use the single threaded runtime to save rss memory
-#[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), Error> {
+fn main() -> Result<(), Error> {
+    // We need to fork as early as possible, especially before setting up tokio.
+    // If we don't, the child will have a strange thread space and we're at risk of deadlocking.
+    // We also have to treat the parent as the child (as described in [1]) to ensure we don't
+    // interrupt the child's execution.
+    // 1: https://docs.rs/nix/0.23.0/nix/unistd/fn.fork.html#safety
+    match unsafe { fork() } {
+        Ok(ForkResult::Parent { child: _, .. }) => {
+            unsafe { _exit(0) };
+        }
+        Ok(ForkResult::Child) => println!("I'm a new child process"),
+        Err(_) => panic!("Fork failed"),
+    }
+    // Use the single threaded runtime to save rss memory.
+    let rt = Builder::new_current_thread().enable_io().build()?;
+    rt.block_on(start_server())?;
+    Ok(())
+}
+
+async fn start_server() -> Result<(), Error> {
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
 
     let server = ConmonServerImpl::new().await?;
