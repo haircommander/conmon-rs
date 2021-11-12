@@ -42,14 +42,10 @@ pub struct ConmonServerImpl {
 
 impl ConmonServerImpl {
     /// Create a new ConmonServerImpl instance.
-    pub async fn new() -> Result<Self> {
+    pub fn new() -> Result<Self> {
         let server = Self::default();
         server.init_logging().context("set log verbosity")?;
-        server
-            .config()
-            .validate()
-            .await
-            .context("validate config")?;
+        server.config().validate().context("validate config")?;
 
         server.init_self()?;
         Ok(server)
@@ -89,6 +85,9 @@ impl Conmon for ConmonServerImpl {
 }
 
 fn main() -> Result<(), Error> {
+    // First, initialize the server so we have access to the config pre-fork.
+    let server = ConmonServerImpl::new()?;
+
     // We need to fork as early as possible, especially before setting up tokio.
     // If we don't, the child will have a strange thread space and we're at risk of deadlocking.
     // We also have to treat the parent as the child (as described in [1]) to ensure we don't
@@ -98,19 +97,17 @@ fn main() -> Result<(), Error> {
         Ok(ForkResult::Parent { child: _, .. }) => {
             unsafe { _exit(0) };
         }
-        Ok(ForkResult::Child) => println!("I'm a new child process"),
-        Err(_) => panic!("Fork failed"),
+        Ok(ForkResult::Child) => (),
+        Err(e) => panic!("Fork failed {}", e),
     }
     // Use the single threaded runtime to save rss memory.
     let rt = Builder::new_current_thread().enable_io().build()?;
-    rt.block_on(start_server())?;
+    rt.block_on(start_server(server))?;
     Ok(())
 }
 
-async fn start_server() -> Result<(), Error> {
+async fn start_server(server: ConmonServerImpl) -> Result<(), Error> {
     let (shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
-
-    let server = ConmonServerImpl::new().await?;
 
     let socket = server.config().socket().clone();
     let sigterm_handler = tokio::spawn(start_sigterm_handler(socket, shutdown_tx));
