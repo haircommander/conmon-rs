@@ -108,6 +108,28 @@ var _ = Describe("ConmonClient", func() {
 				return rr.RunCommandCheckOutput(ctrID, "list")
 			}, time.Second*5).Should(BeNil())
 		})
+		It("should write exit file", func() {
+			exitPath := MustFileInTempDir(tmpDir, "exit")
+			sut = configGivenEnv(socketPath, pidFilePath, rr.runtimeRoot)
+			Expect(WaitUntilServerUp(sut)).To(BeNil())
+			_, err := sut.CreateContainer(context.Background(), &client.CreateContainerConfig{
+				ID:         ctrID,
+				BundlePath: tmpDir,
+				ExitPaths:  []string{exitPath},
+			})
+			Expect(err).To(BeNil())
+			Eventually(func() error {
+				return rr.RunCommandCheckOutput(ctrID, "list")
+			}, time.Second*5).Should(BeNil())
+
+			Expect(rr.RunCommand("start", ctrID)).To(BeNil())
+			f, err := os.Open(exitPath)
+			Expect(err).To(BeNil())
+			defer f.Close()
+			b, err := ioutil.ReadAll(f)
+			Expect(err).To(BeNil())
+			Expect(string(b)).To(Equal("0"))
+		})
 	})
 })
 
