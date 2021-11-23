@@ -5,6 +5,7 @@ use capnp_rpc::pry;
 use clap::crate_version;
 use conmon_common::conmon_capnp::conmon;
 use log::debug;
+use std::path::PathBuf;
 use tokio::process::Command;
 
 const VERSION: &str = crate_version!();
@@ -32,20 +33,27 @@ impl conmon::Server for Server {
         );
         let args = pry!(self.generate_runtime_args(&params));
 
-        let mut child = pry!(Command::new(self.config().runtime()).args(args).spawn());
+        let child = pry!(Command::new(self.config().runtime()).args(args).spawn());
 
         let pid = pry!(child
             .id()
             .ok_or_else(|| Error::failed("Child of container creation had none id".into())));
 
         let id = pry!(req.get_id()).to_string();
-        tokio::spawn(async move {
-            match child.wait().await {
-                Ok(status) => debug!("status for container ID {} is {}", id, status),
-                Err(e) => debug!("failed to spawn runtime process {}", e),
-            }
-        });
+        let exit_paths = pry!(path_vec_from_text_list(pry!(req.get_exit_paths())));
+
+        self.reaper().wait_child(id, child, exit_paths);
+
         results.get().init_response().set_container_pid(pid);
         Promise::ok(())
     }
+}
+
+fn path_vec_from_text_list(tl: capnp::text_list::Reader) -> Result<Vec<PathBuf>, capnp::Error> {
+    let mut v: Vec<PathBuf> = vec![];
+    for t in tl {
+        let t_str = t?.to_string();
+        v.push(PathBuf::from(t_str));
+    }
+    Ok(v)
 }

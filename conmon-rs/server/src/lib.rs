@@ -21,6 +21,7 @@ use tokio::{
 use tokio_util::compat::TokioAsyncReadCompatExt;
 use twoparty::VatNetwork;
 
+mod child_reaper;
 mod config;
 mod console;
 mod cri_logger;
@@ -32,6 +33,9 @@ pub struct Server {
     #[doc = "The main conmon configuration."]
     #[getset(get, get_mut)]
     config: config::Config,
+
+    #[getset(get, get_mut)]
+    reaper: child_reaper::ChildReaper,
 }
 
 impl Server {
