@@ -95,6 +95,7 @@ impl Server {
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let socket = self.config().socket().to_path_buf();
         tokio::spawn(Self::start_sigterm_handler(socket, shutdown_tx));
+        self.reaper.start()?;
 
         task::spawn_blocking(move || {
             let rt = runtime::Handle::current();

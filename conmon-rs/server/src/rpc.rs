@@ -42,7 +42,9 @@ impl conmon::Server for Server {
         let id = pry!(req.get_id()).to_string();
         let exit_paths = pry!(path_vec_from_text_list(pry!(req.get_exit_paths())));
 
-        self.reaper().wait_child(id, child, exit_paths);
+        if let Err(e) = self.reaper().wait_child(id, child, exit_paths) {
+            return Promise::err(Error::failed(e.to_string()));
+        }
 
         results.get().init_response().set_container_pid(pid);
         Promise::ok(())
