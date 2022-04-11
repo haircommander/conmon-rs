@@ -74,6 +74,8 @@ impl Server {
             }
         }
 
+        console_subscriber::init();
+
         // now that we've forked, set self to childreaper
         prctl::set_child_subreaper(true)
             .map_err(errno::from_i32)

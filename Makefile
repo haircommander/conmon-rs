@@ -5,10 +5,10 @@ BINARY := conmonrs
 CONTAINER_RUNTIME ?= $(if $(shell which podman 2>/dev/null),podman,docker)
 
 default:
-	cargo build
+	RUSTFLAGS="--cfg tokio_unstable" cargo build
 
 release:
-	cargo build --release
+	RUSTFLAGS="--cfg tokio_unstable" cargo build --release
 
 .PHONY: release-static
 release-static:
