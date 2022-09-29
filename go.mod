@@ -5,10 +5,10 @@ go 1.18
 require (
 	capnproto.org/go/capnp/v3 v3.0.0-alpha.5
 	github.com/containers/common v0.49.1
-	github.com/containers/storage v1.42.0
+	github.com/containers/storage v1.43.0
 	github.com/onsi/ginkgo/v2 v2.1.4
 	github.com/onsi/gomega v1.20.0
-	github.com/opencontainers/runc v1.1.3
+	github.com/opencontainers/runc v1.1.4
 	github.com/opencontainers/runtime-tools v0.9.1-0.20220714195903-17b3287fafb7
 	github.com/sirupsen/logrus v1.9.0
 )
@@ -17,7 +17,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.3 // indirect
-	github.com/docker/go-units v0.4.0 // indirect
+	github.com/docker/go-units v0.5.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
